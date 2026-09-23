@@ -237,6 +237,7 @@ pub async fn build_review_input_from_git(
             id: 0,
             subject,
             patches,
+            cover_letter: None,
         },
         shas,
     ))
@@ -320,6 +321,7 @@ pub async fn run_worker(
     let patchset_id = input.id;
     let subject = input.subject;
     let patches = input.patches;
+    let cover_letter = input.cover_letter;
     let baseline_arg = if options.current_tree {
         options.baseline.clone().unwrap_or_default()
     } else {
@@ -410,6 +412,7 @@ pub async fn run_worker(
         &baseline_arg,
         &baseline_sha,
         &options,
+        cover_letter.as_deref(),
         progress,
     )
     .await;
@@ -479,6 +482,7 @@ async fn review_single_patch(
     rich_patches: &[Value],
     patch_shas: &HashMap<i64, String>,
     options: &WorkerOptions,
+    cover_letter: Option<&str>,
     baseline_sha: &str,
     llm_semaphore: &Arc<Semaphore>,
     quota: &Arc<crate::ai::quota::QuotaManager>,
@@ -568,6 +572,7 @@ async fn review_single_patch(
                 max_interactions: ai.max_interactions,
                 temperature: ai.temperature,
                 custom_prompt: options.custom_prompt.clone(),
+                cover_letter: cover_letter.map(str::to_string),
                 series_range,
                 baseline_sha: Some(baseline_sha.to_string()),
                 stages: options.stages.clone(),
@@ -731,6 +736,7 @@ async fn run_worker_in_worktree(
     baseline_arg: &str,
     baseline_sha: &str,
     options: &WorkerOptions,
+    cover_letter: Option<&str>,
     progress: Option<&ProgressCallback<'_>>,
 ) -> Result<Value> {
     info!("Worktree at {:?}", worktree.path);
@@ -938,6 +944,7 @@ async fn run_worker_in_worktree(
                 &rich_patches,
                 patch_shas,
                 options,
+                cover_letter,
                 baseline_sha,
                 llm_semaphore,
                 quota,
